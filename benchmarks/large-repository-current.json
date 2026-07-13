@@ -1,0 +1,130 @@
+{
+  "history_corpora": [
+    {
+      "active_entries": 15,
+      "active_preview_token_estimate": 1048,
+      "bundle_build_ms": 4.341899999417365,
+      "dashboard_bundle_payload_token_estimate": 22133,
+      "database_bytes": 339968,
+      "events": 100,
+      "exact_search_recall_rate": 1.0,
+      "preview_reduction_vs_recorded_native_usage_percent": 99.476,
+      "preview_reduction_vs_retained_digest_percent": 77.70212765957447,
+      "recorded_native_session_tokens": 200000,
+      "retained_digest_token_estimate": 4700,
+      "search_latency_ms": {
+        "p50": 34.28349999740021,
+        "p95": 34.28349999740021
+      },
+      "seed_ms": 119.42350000026636
+    },
+    {
+      "active_entries": 15,
+      "active_preview_token_estimate": 1048,
+      "bundle_build_ms": 15.340199999627657,
+      "dashboard_bundle_payload_token_estimate": 185714,
+      "database_bytes": 815104,
+      "events": 1000,
+      "exact_search_recall_rate": 1.0,
+      "preview_reduction_vs_recorded_native_usage_percent": 99.94760000000001,
+      "preview_reduction_vs_retained_digest_percent": 97.77021276595744,
+      "recorded_native_session_tokens": 2000000,
+      "retained_digest_token_estimate": 47000,
+      "search_latency_ms": {
+        "p50": 83.43240000249352,
+        "p95": 83.43240000249352
+      },
+      "seed_ms": 180.0026000055368
+    },
+    {
+      "active_entries": 15,
+      "active_preview_token_estimate": 1048,
+      "bundle_build_ms": 97.95190000295406,
+      "dashboard_bundle_payload_token_estimate": 1823719,
+      "database_bytes": 5537792,
+      "events": 10000,
+      "exact_search_recall_rate": 1.0,
+      "preview_reduction_vs_recorded_native_usage_percent": 99.99476,
+      "preview_reduction_vs_retained_digest_percent": 99.77702127659575,
+      "recorded_native_session_tokens": 20000000,
+      "retained_digest_token_estimate": 470000,
+      "search_latency_ms": {
+        "p50": 84.70400000078371,
+        "p95": 84.70400000078371
+      },
+      "seed_ms": 630.8414999948582
+    }
+  ],
+  "methodology": {
+    "history": "Synthetic history rows use 2,000 recorded native tokens each and compact digests. Native-token reduction is reuse potential, not a measured control run.",
+    "repository": "Generated Python files are indexed through the production repository intelligence path. Each search includes the production automatic refresh.",
+    "scope": "Measures retrieval mechanics, storage, latency, and payload size. It does not measure answer correctness, task completion, model caching, or billing.",
+    "token_estimate": "ceil(UTF-8 source characters / 4); not a model tokenizer"
+  },
+  "repositories": [
+    {
+      "architecture_map_ms": 145.96500000334345,
+      "architecture_map_token_estimate": 11978,
+      "architecture_map_truncated": true,
+      "cold_index_ms": 936.263700001291,
+      "database_bytes": 1093632,
+      "exact_lookup_top1_rate": 1.0,
+      "files": 100,
+      "mean_search_response_token_estimate": 250.0,
+      "relationships": 1200,
+      "search_latency_ms": {
+        "p50": 149.24694999717758,
+        "p95": 149.3313999962993
+      },
+      "search_response_reduction_vs_whole_source_percent": 98.10246679316889,
+      "source_characters": 52700,
+      "symbols": 400,
+      "unchanged_on_warm_index": 100,
+      "warm_no_change_index_ms": 142.3752000046079,
+      "whole_source_token_estimate": 13175
+    },
+    {
+      "architecture_map_ms": 610.8975000024657,
+      "architecture_map_token_estimate": 20155,
+      "architecture_map_truncated": true,
+      "cold_index_ms": 7676.886000001105,
+      "database_bytes": 8777728,
+      "exact_lookup_top1_rate": 1.0,
+      "files": 1000,
+      "mean_search_response_token_estimate": 250.0,
+      "relationships": 12000,
+      "search_latency_ms": {
+        "p50": 571.427600003517,
+        "p95": 585.4630000030738
+      },
+      "search_response_reduction_vs_whole_source_percent": 99.81024667931689,
+      "source_characters": 527000,
+      "symbols": 4000,
+      "unchanged_on_warm_index": 1000,
+      "warm_no_change_index_ms": 538.9643999951659,
+      "whole_source_token_estimate": 131750
+    },
+    {
+      "architecture_map_ms": 2507.777500002703,
+      "architecture_map_token_estimate": 20156,
+      "architecture_map_truncated": true,
+      "cold_index_ms": 34257.2291999968,
+      "database_bytes": 42790912,
+      "exact_lookup_top1_rate": 1.0,
+      "files": 5000,
+      "mean_search_response_token_estimate": 250.0,
+      "relationships": 60000,
+      "search_latency_ms": {
+        "p50": 2487.2874000029697,
+        "p95": 2517.607900001167
+      },
+      "search_response_reduction_vs_whole_source_percent": 99.96204933586338,
+      "source_characters": 2635000,
+      "symbols": 20000,
+      "unchanged_on_warm_index": 5000,
+      "warm_no_change_index_ms": 2321.4405000035185,
+      "whole_source_token_estimate": 658750
+    }
+  ],
+  "schema_version": 1
+}

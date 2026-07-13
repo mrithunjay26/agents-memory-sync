@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.db
+.venv
+config/generated/
+secret_key
+.agentmemorysync_uploads/
+.agentmemorysync/
+run_diag.py
+.idea/

@@ -1,0 +1,4 @@
+[mcp_servers.agent_memory_sync]
+command = '__AGENT_MEMORY_SYNC_PYTHON__'
+args = ['__AGENT_MEMORY_SYNC_ROOT__/mcp_server.py']
+startup_timeout_sec = 15

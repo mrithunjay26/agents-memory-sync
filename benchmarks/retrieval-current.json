@@ -1,0 +1,268 @@
+{
+  "dataset": {
+    "categories": {
+      "architecture": 30,
+      "change_localization": 30,
+      "code_navigation": 30,
+      "dependency_tracing": 30,
+      "exact_lookup": 30,
+      "paraphrased_decision_recall": 30
+    },
+    "documents": 180,
+    "name": "agentmemorysync-retrieval-v1",
+    "queries": 180
+  },
+  "dataset_caveat": "A synthetic regression suite. It is balanced across six retrieval categories and must not be used as evidence of real-world or Bluebird parity.",
+  "indexing": {
+    "corpus_load_and_fts_index_ms": 4885.241299998597,
+    "database_bytes": 385024,
+    "document_count": 180
+  },
+  "measurement_notes": {
+    "citation_correctness": "Not measured without generated answers; top1_citation_proxy only checks whether the first retrieved evidence id is labeled relevant.",
+    "indexing_cost": "corpus_load_and_fts_index_ms includes SQLite connection, migration, corpus writes, and incremental FTS trigger maintenance.",
+    "task_completion": "Not measured by a retrieval-only benchmark.",
+    "tokens_delivered": "Estimated as ceil(snippet characters / 4) for the top five results."
+  },
+  "not_run": {
+    "bluebird": "Requires authorized Bluebird access and an identical external corpus.",
+    "dense_vectors": "No dense retriever or embedding model is implemented.",
+    "hybrid": "Requires a dense retriever in addition to FTS5.",
+    "hybrid_plus_code_graph": "No repository code graph is implemented."
+  },
+  "schema_version": 1,
+  "systems": {
+    "fts5": {
+      "by_category": {
+        "architecture": {
+          "citation_correctness": null,
+          "evidence_precision_at_5": 0.2,
+          "latency_ms": {
+            "p50": 62.939299998106435,
+            "p95": 64.37829999777023
+          },
+          "mean_delivered_tokens_at_5": 162.36666666666667,
+          "mrr": 1.0,
+          "ndcg_at_10": 1.0,
+          "query_count": 30,
+          "recall_at_5": 1.0,
+          "retrieval_success_at_5": 1.0,
+          "task_completion": null,
+          "top1_citation_proxy": 1.0
+        },
+        "change_localization": {
+          "citation_correctness": null,
+          "evidence_precision_at_5": 0.2,
+          "latency_ms": {
+            "p50": 63.36790000204928,
+            "p95": 64.69400000059977
+          },
+          "mean_delivered_tokens_at_5": 165.93333333333334,
+          "mrr": 1.0,
+          "ndcg_at_10": 1.0,
+          "query_count": 30,
+          "recall_at_5": 1.0,
+          "retrieval_success_at_5": 1.0,
+          "task_completion": null,
+          "top1_citation_proxy": 1.0
+        },
+        "code_navigation": {
+          "citation_correctness": null,
+          "evidence_precision_at_5": 0.19333333333333336,
+          "latency_ms": {
+            "p50": 62.93920000462094,
+            "p95": 67.69860000349581
+          },
+          "mean_delivered_tokens_at_5": 156.13333333333333,
+          "mrr": 0.9722222222222222,
+          "ndcg_at_10": 0.9785402395702675,
+          "query_count": 30,
+          "recall_at_5": 0.9666666666666667,
+          "retrieval_success_at_5": 0.9666666666666667,
+          "task_completion": null,
+          "top1_citation_proxy": 0.9666666666666667
+        },
+        "dependency_tracing": {
+          "citation_correctness": null,
+          "evidence_precision_at_5": 0.2,
+          "latency_ms": {
+            "p50": 63.120999999227934,
+            "p95": 64.97599999420345
+          },
+          "mean_delivered_tokens_at_5": 146.8,
+          "mrr": 1.0,
+          "ndcg_at_10": 1.0,
+          "query_count": 30,
+          "recall_at_5": 1.0,
+          "retrieval_success_at_5": 1.0,
+          "task_completion": null,
+          "top1_citation_proxy": 1.0
+        },
+        "exact_lookup": {
+          "citation_correctness": null,
+          "evidence_precision_at_5": 0.2,
+          "latency_ms": {
+            "p50": 63.572500002919696,
+            "p95": 64.56939999770839
+          },
+          "mean_delivered_tokens_at_5": 172.0,
+          "mrr": 1.0,
+          "ndcg_at_10": 1.0,
+          "query_count": 30,
+          "recall_at_5": 1.0,
+          "retrieval_success_at_5": 1.0,
+          "task_completion": null,
+          "top1_citation_proxy": 1.0
+        },
+        "paraphrased_decision_recall": {
+          "citation_correctness": null,
+          "evidence_precision_at_5": 0.2,
+          "latency_ms": {
+            "p50": 63.46979999943869,
+            "p95": 67.31240000226535
+          },
+          "mean_delivered_tokens_at_5": 172.43333333333334,
+          "mrr": 1.0,
+          "ndcg_at_10": 1.0,
+          "query_count": 30,
+          "recall_at_5": 1.0,
+          "retrieval_success_at_5": 1.0,
+          "task_completion": null,
+          "top1_citation_proxy": 1.0
+        }
+      },
+      "overall": {
+        "citation_correctness": null,
+        "evidence_precision_at_5": 0.19888888888888892,
+        "latency_ms": {
+          "p50": 63.26880000415258,
+          "p95": 65.00609999784501
+        },
+        "mean_delivered_tokens_at_5": 162.61111111111111,
+        "mrr": 0.9953703703703703,
+        "ndcg_at_10": 0.9964233732617113,
+        "query_count": 180,
+        "recall_at_5": 0.9944444444444445,
+        "retrieval_success_at_5": 0.9944444444444445,
+        "task_completion": null,
+        "top1_citation_proxy": 0.9944444444444445
+      }
+    },
+    "like": {
+      "by_category": {
+        "architecture": {
+          "citation_correctness": null,
+          "evidence_precision_at_5": 0.5,
+          "latency_ms": {
+            "p50": 2.6990000042133033,
+            "p95": 2.8737000029650517
+          },
+          "mean_delivered_tokens_at_5": 70.4,
+          "mrr": 1.0,
+          "ndcg_at_10": 1.0,
+          "query_count": 30,
+          "recall_at_5": 1.0,
+          "retrieval_success_at_5": 1.0,
+          "task_completion": null,
+          "top1_citation_proxy": 1.0
+        },
+        "change_localization": {
+          "citation_correctness": null,
+          "evidence_precision_at_5": 0.2,
+          "latency_ms": {
+            "p50": 3.1549999985145405,
+            "p95": 3.3064000017475337
+          },
+          "mean_delivered_tokens_at_5": 164.0,
+          "mrr": 1.0,
+          "ndcg_at_10": 1.0,
+          "query_count": 30,
+          "recall_at_5": 1.0,
+          "retrieval_success_at_5": 1.0,
+          "task_completion": null,
+          "top1_citation_proxy": 1.0
+        },
+        "code_navigation": {
+          "citation_correctness": null,
+          "evidence_precision_at_5": 0.2,
+          "latency_ms": {
+            "p50": 2.6342999990447424,
+            "p95": 2.763500000583008
+          },
+          "mean_delivered_tokens_at_5": 155.66666666666666,
+          "mrr": 1.0,
+          "ndcg_at_10": 1.0,
+          "query_count": 30,
+          "recall_at_5": 1.0,
+          "retrieval_success_at_5": 1.0,
+          "task_completion": null,
+          "top1_citation_proxy": 1.0
+        },
+        "dependency_tracing": {
+          "citation_correctness": null,
+          "evidence_precision_at_5": 0.2,
+          "latency_ms": {
+            "p50": 3.00470000365749,
+            "p95": 3.1996999969123863
+          },
+          "mean_delivered_tokens_at_5": 144.56666666666666,
+          "mrr": 1.0,
+          "ndcg_at_10": 1.0,
+          "query_count": 30,
+          "recall_at_5": 1.0,
+          "retrieval_success_at_5": 1.0,
+          "task_completion": null,
+          "top1_citation_proxy": 1.0
+        },
+        "exact_lookup": {
+          "citation_correctness": null,
+          "evidence_precision_at_5": 0.2,
+          "latency_ms": {
+            "p50": 3.073799998674076,
+            "p95": 3.354200001922436
+          },
+          "mean_delivered_tokens_at_5": 170.66666666666666,
+          "mrr": 1.0,
+          "ndcg_at_10": 1.0,
+          "query_count": 30,
+          "recall_at_5": 1.0,
+          "retrieval_success_at_5": 1.0,
+          "task_completion": null,
+          "top1_citation_proxy": 1.0
+        },
+        "paraphrased_decision_recall": {
+          "citation_correctness": null,
+          "evidence_precision_at_5": 0.2,
+          "latency_ms": {
+            "p50": 3.158599996822886,
+            "p95": 3.5303999975440092
+          },
+          "mean_delivered_tokens_at_5": 166.63333333333333,
+          "mrr": 1.0,
+          "ndcg_at_10": 1.0,
+          "query_count": 30,
+          "recall_at_5": 1.0,
+          "retrieval_success_at_5": 1.0,
+          "task_completion": null,
+          "top1_citation_proxy": 1.0
+        }
+      },
+      "overall": {
+        "citation_correctness": null,
+        "evidence_precision_at_5": 0.25,
+        "latency_ms": {
+          "p50": 3.061200004594866,
+          "p95": 3.319300005387049
+        },
+        "mean_delivered_tokens_at_5": 145.32222222222222,
+        "mrr": 1.0,
+        "ndcg_at_10": 1.0,
+        "query_count": 180,
+        "recall_at_5": 1.0,
+        "retrieval_success_at_5": 1.0,
+        "task_completion": null,
+        "top1_citation_proxy": 1.0
+      }
+    }
+  }
+}

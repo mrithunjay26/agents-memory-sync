@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AgenticSync</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<div id="toasts" class="toasts"></div>
+
+<div class="app" data-view="overview">
+
+  <aside class="rail">
+    <div class="rail-brand">
+      <div class="brand">
+        <span class="brand-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8"/><path d="M20 4v4h-4"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 16"/><path d="M4 20v-4h4"/></svg>
+        </span>
+        <span class="brand-name">AgenticSync</span>
+      </div>
+      <button class="icon-btn" id="rail-add" title="Add a project" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    </div>
+
+    <div class="rail-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+      <input type="text" id="project-search" placeholder="Filter projects" autocomplete="off" />
+    </div>
+
+    <div class="rail-scroll">
+      <div class="rail-section-label">Workspace</div>
+      <div class="sidebar-item all-projects active" id="all-projects-item" data-project="">
+        <div class="sidebar-item-title">All projects</div>
+        <div class="sidebar-item-meta">pooled cross-agent view</div>
+      </div>
+
+      <div class="rail-section-label">Repositories</div>
+      <div id="project-list"></div>
+
+      <div class="add-project">
+        <input type="text" id="add-project-path" placeholder="/path/to/your/repo" />
+        <button id="add-project-btn" class="btn btn-secondary btn-block" type="button">+ Track a repository</button>
+        <div id="add-project-status" class="status"></div>
+      </div>
+    </div>
+
+    <div class="rail-foot">
+      <div class="user">
+        <span class="avatar">AS</span>
+        <div class="user-meta">
+          <div class="user-name">Signed in</div>
+          <div class="user-role">admin · local</div>
+        </div>
+      </div>
+      <button id="logout-btn" class="link-btn" type="button">Log out</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="breadcrumb">
+        <svg class="tool-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.3 2.3-2.1-.6-.6-2.1z"/></svg>
+        <span class="crumb-root">Workspace</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-current" id="panel-title">All projects</span>
+      </div>
+      <div class="topbar-actions">
+        <span class="status-live"><span class="live-dot"></span> streaming</span>
+        <button id="backfill-btn" class="btn btn-secondary" style="display:none;" type="button">Import history</button>
+        <span id="backfill-status" class="status"></span>
+      </div>
+    </header>
+
+    <div id="notice-strip" class="notice-strip" style="display:none;"></div>
+
+    <div class="cockpit">
+
+      <section class="stage">
+        <div class="stage-tabs" id="stage-tabs" role="tablist">
+          <button class="stage-tab active" data-tab="overview" type="button" role="tab">Overview <span class="tab-count danger" id="tab-count-conflicts"></span></button>
+          <button class="stage-tab" data-tab="deployments" type="button" role="tab">Deployments <span class="tab-count" id="tab-count-deploy"></span></button>
+          <button class="stage-tab" data-tab="briefing" type="button" role="tab">Briefing</button>
+          <button class="stage-tab" data-tab="activity" type="button" role="tab">Activity</button>
+        </div>
+
+        <div class="stage-body">
+
+          <div class="stage-view" id="view-overview">
+            <p class="overview-note">Pick a repository in the left rail to see its <strong>context economy</strong> and deploy agents into it. Conflicts and agent mix below are pooled across every repo.</p>
+
+            <div class="panel telemetry-panel" id="telemetry-panel" style="display:none;">
+              <h2>
+                <span class="h2-label">Context economy</span>
+                <span class="telemetry-heading-actions">
+                  <span class="badge">measured · no invented savings</span>
+                  <button id="telemetry-explain-toggle" class="telemetry-explain-toggle" type="button" aria-expanded="false" aria-controls="telemetry-explainer">Explain this</button>
+                </span>
+              </h2>
+              <div id="telemetry-body"></div>
+              <section id="telemetry-explainer" class="telemetry-explainer" hidden aria-label="How context economy metrics work">
+                <div id="telemetry-explainer-body"></div>
+              </section>
+            </div>
+
+            <div class="overview-row">
+              <div class="panel" id="agent-mix-panel">
+                <h2><span class="h2-label">Agent mix</span></h2>
+                <div id="agent-chart" class="agent-chart"></div>
+              </div>
+
+              <div class="panel" id="conflicts-panel">
+                <h2><span class="h2-label">Conflict alerts</span></h2>
+                <div id="conflicts-list" class="conflicts-list">
+                  <p class="empty">No conflicts detected.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stage-view" id="view-deployments">
+            <div class="needs-project">
+              <span class="np-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M3 12h18M3 17h18"/></svg></span>
+              <strong>Pick a repository</strong>
+              <span>Deployment history is per-repo. Choose one in the left rail to see its runs, logs, and results.</span>
+            </div>
+            <div class="panel" id="dispatch-history-panel" style="display:none;">
+              <h2><span class="h2-label">Deployments</span> <span id="runs-count" class="count-badge"></span></h2>
+              <div id="dispatch-history-list" class="dispatch-history-list">
+                <p class="empty">No agents deployed yet.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="stage-view" id="view-briefing">
+            <div class="needs-project">
+              <span class="np-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg></span>
+              <strong>Pick a repository</strong>
+              <span>The shared agent briefing is curated per-repo. Choose one in the left rail to review and edit what the next agent will know.</span>
+            </div>
+            <div class="panel context-panel" id="context-panel" style="display:none;">
+              <div class="context-heading">
+                <div>
+                  <div class="context-eyebrow">Shared agent briefing</div>
+                  <h2>What the next agent will know</h2>
+                  <p>Curate one concise project briefing. Claude Code and Codex receive the same selected entries on their next run.</p>
+                </div>
+                <div class="context-actions">
+                  <button id="context-help-toggle" class="btn btn-secondary btn-tiny" type="button" aria-expanded="false" aria-controls="context-help">Rules and examples</button>
+                  <button id="context-add-note" class="btn btn-secondary btn-tiny" type="button">Add durable briefing</button>
+                  <button id="context-recategorize-toggle" class="btn btn-secondary btn-tiny" type="button" aria-expanded="false" aria-controls="context-recategorize-form">Recategorize with agent</button>
+                  <button id="context-copy" class="btn btn-secondary btn-tiny" type="button">Copy agent briefing</button>
+                </div>
+              </div>
+              <div class="context-flow" aria-label="How pooled context reaches agents">
+                <div class="context-flow-step">
+                  <span class="context-flow-number">1</span>
+                  <span><strong>Capture</strong><small>Agent results and imported history stay as an audit trail.</small></span>
+                </div>
+                <span class="context-flow-arrow" aria-hidden="true">&rarr;</span>
+                <div class="context-flow-step active">
+                  <span class="context-flow-number">2</span>
+                  <span><strong>Curate here</strong><small>Rewrite, keep always, or remove noise from the briefing.</small></span>
+                </div>
+                <span class="context-flow-arrow" aria-hidden="true">&rarr;</span>
+                <div class="context-flow-step">
+                  <span class="context-flow-number">3</span>
+                  <span><strong>Deliver</strong><small>The selected text is prepended to both agents' next task.</small></span>
+                </div>
+              </div>
+              <div id="context-help" class="context-help" hidden>
+                <div><strong>Rewrite agent text</strong><span>Only changes the wording sent to agents. The original captured record stays untouched for audit.</span></div>
+                <div><strong>Keep on every run</strong><span>Always sends the entry, even after it's older than the newest-entry limit. Good for durable decisions and constraints.</span></div>
+                <div><strong>Remove from briefing</strong><span>Sends the entry to neither agent, but keeps it searchable here. Good for chatter, duplicates, and stale work.</span></div>
+                <div><strong>Category</strong><span>Changes dashboard organization only. It doesn't affect selection, ordering, or agent behavior.</span></div>
+                <div><strong>Newest-entry limit</strong><span>After always-kept entries, sends this many newest included records. Raising it adds prompt cost and may add noise.</span></div>
+                <div><strong>Agent preview</strong><span>The exact, character-for-character shared briefing. If the wording is unclear here, rewrite the source entry.</span></div>
+              </div>
+              <div class="context-impact-grid" aria-live="polite">
+                <div class="context-impact-card primary"><span id="context-entry-count">0</span><small>entries sent on the next run</small></div>
+                <div class="context-impact-card"><span id="context-pinned-count">0</span><small>kept on every run</small></div>
+                <div class="context-impact-card"><span id="context-needs-work-count">0</span><small>selected entries need clearer wording</small></div>
+                <div class="context-impact-card"><span id="context-token-count">~0</span><small>estimated prompt tokens</small></div>
+              </div>
+              <div class="context-toolbar">
+                <div class="context-tabs" role="tablist" aria-label="Pooled context view">
+                  <button id="context-tab-entries" class="context-tab active" role="tab" aria-selected="true" aria-controls="context-entries" type="button">Curate briefing</button>
+                  <button id="context-tab-map" class="context-tab" role="tab" aria-selected="false" aria-controls="context-map" type="button">Coverage</button>
+                  <button id="context-tab-preview" class="context-tab" role="tab" aria-selected="false" aria-controls="context-preview-panel" type="button">Agent preview</button>
+                </div>
+                <div class="context-stats" aria-live="polite">
+                  <span id="context-corpus-count">0 records retained</span>
+                  <label title="Always-kept entries do not count against this number.">Newest entries sent
+                    <select id="context-limit" aria-label="Recent context entry limit">
+                      <option value="5">5</option>
+                      <option value="10">10</option>
+                      <option value="15">15</option>
+                      <option value="25">25</option>
+                      <option value="50">50</option>
+                      <option value="100">100</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <div class="context-filters" id="context-filters">
+                <label class="context-search"><span>Find a record</span><input id="context-search" type="search" placeholder="Search what happened, source, or category" /></label>
+                <label>Show
+                  <select id="context-state-filter">
+                    <option value="all">All entries</option>
+                    <option value="selected">Sent on next run</option>
+                    <option value="needs_work">Needs clearer wording</option>
+                    <option value="pinned">Kept on every run</option>
+                    <option value="outside">Included but not sent</option>
+                    <option value="excluded">Removed from briefing</option>
+                  </select>
+                </label>
+              </div>
+              <div id="context-note-form" class="context-note-form" hidden>
+                <div class="context-note-heading">
+                  <div><strong>Add knowledge agents can't infer from code</strong><span>Write down the decision or constraint, why it exists, and when the next agent should apply it.</span></div>
+                </div>
+                <label for="context-note-content">Agent-facing briefing text</label>
+                <textarea id="context-note-content" maxlength="4000" placeholder="Decision: Keep SQLite as the local store. Reason: hooks must work without a server. Apply when changing persistence or deployment behavior."></textarea>
+                <div class="context-form-actions">
+                  <label>Organize under (dashboard only)
+                    <select id="context-note-category">
+                      <option value="decision">Durable decision</option>
+                      <option value="constraint">Hard constraint</option>
+                      <option value="task">Open work / next step</option>
+                      <option value="artifact">Delivered change</option>
+                      <option value="insight">Verified finding</option>
+                      <option value="note" selected>Project knowledge</option>
+                      <option value="activity">Activity record</option>
+                    </select>
+                  </label>
+                  <button id="context-note-cancel" class="btn btn-secondary btn-tiny" type="button">Cancel</button>
+                  <button id="context-note-save" class="btn btn-tiny" type="button">Add to shared briefing</button>
+                </div>
+              </div>
+              <div id="context-recategorize-form" class="context-note-form" hidden>
+                <div class="context-note-heading">
+                  <div><strong>Recategorize with an agent</strong><span>Send every entry's current category plus your instructions to an agent. It picks new categories and applies them automatically. It won't touch any files.</span></div>
+                </div>
+                <label for="context-recategorize-instructions">Instructions for the agent</label>
+                <textarea id="context-recategorize-instructions" maxlength="4000" placeholder="Move anything about the SQLite migration into Durable decision, and file cleanup notes into Activity record."></textarea>
+                <div class="context-form-actions">
+                  <label>Agent
+                    <select id="context-recategorize-agent">
+                      <option value="claude-code">Claude Code</option>
+                      <option value="codex">Codex</option>
+                    </select>
+                  </label>
+                  <button id="context-recategorize-cancel" class="btn btn-secondary btn-tiny" type="button">Cancel</button>
+                  <button id="context-recategorize-send" class="btn btn-tiny" type="button">Recategorize</button>
+                </div>
+              </div>
+              <div id="context-status" class="context-status" role="status" aria-live="polite"></div>
+              <div id="context-entries" role="tabpanel" aria-labelledby="context-tab-entries"></div>
+              <div id="context-map" class="context-map" role="tabpanel" aria-labelledby="context-tab-map" hidden></div>
+              <section id="context-preview-panel" class="context-preview-panel" role="tabpanel" aria-labelledby="context-tab-preview" hidden>
+                <div class="context-preview-heading"><strong>Exact text delivered to Claude Code and Codex</strong><span>Edits appear here immediately. Category changes never change this text.</span></div>
+                <pre id="context-preview" class="context-preview"></pre>
+              </section>
+            </div>
+          </div>
+
+          <div class="stage-view" id="view-activity">
+            <div class="panel timeline-panel">
+              <h2><span class="h2-label">Live activity</span> <span class="status-live"><span class="live-dot"></span> real-time</span></h2>
+              <div id="timeline-list" class="timeline-list">
+                <p class="empty">No activity recorded yet.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <aside class="dock">
+
+        <section class="interaction-panel" id="interaction-panel" style="display:none;" aria-live="assertive">
+          <div class="interaction-panel-heading">
+            <div>
+              <div class="interaction-eyebrow">Agent paused</div>
+              <h2>Input required <span id="interaction-count" class="count-badge"></span></h2>
+            </div>
+            <p>Answer here to continue the same deployment.</p>
+          </div>
+          <div id="interaction-list" class="interaction-list"></div>
+        </section>
+
+        <div class="panel" id="dispatch-panel" style="display:none;">
+          <h2><span class="h2-label">Deploy an agent</span></h2>
+          <div class="presets">
+            <button class="preset" data-preset="research" type="button">Research</button>
+            <button class="preset" data-preset="plan" type="button">Plan</button>
+            <button class="preset" data-preset="execute" type="button">Execute</button>
+            <button class="preset" data-preset="review" type="button">Review</button>
+          </div>
+          <textarea id="dispatch-prompt" class="dispatch-textarea" placeholder="What should the agent do? It already has the shared context for this repo."></textarea>
+          <div id="attached-files" class="attached-files"></div>
+          <div class="dispatch-controls">
+            <select id="dispatch-agent">
+              <option value="claude-code">Claude Code</option>
+              <option value="codex">Codex</option>
+            </select>
+            <label class="dispatch-checkbox">
+              <input type="checkbox" id="dispatch-allow-edits" checked />
+              Allow edits
+            </label>
+            <label class="file-upload-label" title="Upload a file into the repo for the agent">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5 12.5 20a5 5 0 0 1-7-7l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7L10.2 17a1.6 1.6 0 0 1-2.3-2.3l7.8-7.8"/></svg>
+              <input type="file" id="dispatch-file" style="display:none;" />
+            </label>
+            <button id="dispatch-send" class="btn" type="button">Deploy ▸</button>
+          </div>
+          <div id="agent-conn" class="agent-conn"></div>
+          <div class="dispatch-warning">
+            With edits allowed, the agent can modify files in this repo without asking again.
+          </div>
+        </div>
+
+        <div class="dock-hint">
+          <strong>No repository selected</strong>
+          Choose a repo in the left rail to deploy an agent into it. Live agents across every repo still show below.
+        </div>
+
+        <div id="active-agents-bar" class="active-agents-bar" style="display:none;">
+          <span class="active-agents-label"><span class="live-dot"></span> Live agents</span>
+          <div id="active-agents-strip" class="active-agents-strip"></div>
+        </div>
+
+      </aside>
+    </div>
+  </div>
+</div>
+
+
+<script src="/static/app.js"></script>
+<script src="/static/cockpit.js"></script>
+</body>
+</html>
