@@ -627,6 +627,72 @@ async def dispatch_codex(
     return result, state.get("tokens", 0)
 
 
+async def dispatch_local_openai(
+    base_url: str,
+    model: str,
+    headers: dict,
+    prompt: str,
+    on_log,
+) -> tuple[str, int]:
+    import httpx
+
+    url = f"{base_url}/v1/chat/completions"
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": INTERACTION_INSTRUCTIONS},
+            {"role": "user", "content": prompt},
+        ],
+        "stream": True,
+        "stream_options": {"include_usage": True},
+    }
+    text_parts: list[str] = []
+    buffer = ""
+    usage_tokens = 0
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(10.0, read=300.0)) as client:
+            async with client.stream("POST", url, headers=headers, json=payload) as resp:
+                if resp.status_code != 200:
+                    body = (await resp.aread()).decode("utf-8", "replace")
+                    raise RuntimeError(
+                        f"Local model endpoint {url} returned {resp.status_code}: {_brief(body, 300)}"
+                    )
+                async for line in resp.aiter_lines():
+                    line = line.strip()
+                    if not line or not line.startswith("data:"):
+                        continue
+                    data = line[len("data:"):].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        event = json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+                    usage = event.get("usage")
+                    if usage:
+                        usage_tokens = (usage.get("prompt_tokens", 0) or 0) + (
+                            usage.get("completion_tokens", 0) or 0
+                        )
+                    choices = event.get("choices") or []
+                    if not choices:
+                        continue
+                    piece = (choices[0].get("delta") or {}).get("content") or ""
+                    if piece:
+                        text_parts.append(piece)
+                        buffer += piece
+                        if len(buffer) >= 300:
+                            on_log(_entry("msg", buffer))
+                            buffer = ""
+    except httpx.ConnectError as exc:
+        raise RuntimeError(f"Could not reach local model endpoint {url}. Is it running?") from exc
+    if buffer:
+        on_log(_entry("msg", buffer))
+    result = "".join(text_parts).strip() or "(no result text returned)"
+    if not usage_tokens:
+        usage_tokens = (len(result) + 3) // 4
+    return result, usage_tokens
+
+
 def _extract_interaction(result: str) -> tuple[str, dict | None]:
     match = _INTERACTION_RE.search(result or "")
     if match:

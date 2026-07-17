@@ -41,7 +41,7 @@ CONTEXT_CATEGORIES = (
     "note",
     "activity",
 )
-LATEST_SCHEMA_VERSION = 13
+LATEST_SCHEMA_VERSION = 14
 DISPATCH_WORK_STATUSES = ("planned", "in_progress", "blocked", "completed")
 SQLITE_BUSY_TIMEOUT_MS = 30000
 USER_ROLES = ("admin", "member")
@@ -603,6 +603,22 @@ def _migration_13_event_embeddings(conn: sqlite3.Connection) -> None:
     )
 
 
+def _migration_14_local_providers(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS local_providers (
+            agent_id TEXT PRIMARY KEY,
+            display_name TEXT NOT NULL,
+            base_url TEXT NOT NULL,
+            model TEXT NOT NULL,
+            api_key_env TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
 MIGRATIONS = (
     (1, _migration_1_current_schema),
     (2, _migration_2_windows_path_casing),
@@ -617,6 +633,7 @@ MIGRATIONS = (
     (11, _migration_11_repository_intelligence),
     (12, _migration_12_enterprise_controls),
     (13, _migration_13_event_embeddings),
+    (14, _migration_14_local_providers),
 )
 
 
@@ -1298,6 +1315,79 @@ def set_agent_model(agent_id: str, model: str | None) -> dict:
     finally:
         conn.close()
     return {"agent_id": agent_id, "model": model}
+
+
+def _local_provider_row(row) -> dict:
+    return {
+        "agent_id": row[0],
+        "display_name": row[1],
+        "base_url": row[2],
+        "model": row[3],
+        "api_key_env": row[4],
+        "created_at": row[5],
+        "updated_at": row[6],
+    }
+
+
+def list_local_providers() -> list[dict]:
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            "SELECT agent_id, display_name, base_url, model, api_key_env, "
+            "created_at, updated_at FROM local_providers ORDER BY created_at"
+        ).fetchall()
+    finally:
+        conn.close()
+    return [_local_provider_row(row) for row in rows]
+
+
+def get_local_provider(agent_id: str) -> dict | None:
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT agent_id, display_name, base_url, model, api_key_env, "
+            "created_at, updated_at FROM local_providers WHERE agent_id = ?",
+            (agent_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    return _local_provider_row(row) if row else None
+
+
+def upsert_local_provider(
+    agent_id: str,
+    display_name: str,
+    base_url: str,
+    model: str,
+    api_key_env: str | None = None,
+) -> dict:
+    now = _now()
+    conn = _connect()
+    try:
+        conn.execute(
+            "INSERT INTO local_providers "
+            "(agent_id, display_name, base_url, model, api_key_env, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(agent_id) DO UPDATE SET "
+            "display_name = excluded.display_name, base_url = excluded.base_url, "
+            "model = excluded.model, api_key_env = excluded.api_key_env, "
+            "updated_at = excluded.updated_at",
+            (agent_id, display_name, base_url, model, api_key_env, now, now),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return get_local_provider(agent_id)
+
+
+def delete_local_provider(agent_id: str) -> bool:
+    conn = _connect()
+    try:
+        cur = conn.execute("DELETE FROM local_providers WHERE agent_id = ?", (agent_id,))
+        conn.commit()
+    finally:
+        conn.close()
+    return cur.rowcount > 0
 
 
 def get_context_bundle(project_path: str, limit: int | None = None) -> dict:
@@ -2196,6 +2286,18 @@ def get_dispatch_job(job_id: str) -> dict | None:
     finally:
         conn.close()
     return _dispatch_row_to_dict(row) if row else None
+
+
+def sum_dispatch_tokens(project_path: str, agent: str) -> int:
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT COALESCE(SUM(tokens), 0) FROM dispatch_jobs WHERE project_path = ? AND agent = ?",
+            (project_path, agent),
+        ).fetchone()
+    finally:
+        conn.close()
+    return int(row[0] or 0)
 
 
 def list_dispatch_jobs(project_path: str, limit: int = 50) -> list[dict]:

@@ -44,8 +44,28 @@ function shortPath(p) {
   return parts[parts.length - 1] || p;
 }
 
+let AGENTS_CACHE = [
+  { id: "claude-code", display_name: "Claude Code", capabilities: { dispatch: true } },
+  { id: "codex", display_name: "Codex", capabilities: { dispatch: true } },
+];
+
+async function loadAgentsCache() {
+  try {
+    const res = await apiFetch("/api/agents");
+    const agents = await res.json();
+    if (Array.isArray(agents) && agents.length) AGENTS_CACHE = agents;
+  } catch {}
+  return AGENTS_CACHE;
+}
+
+function dispatchableAgents() {
+  return AGENTS_CACHE.filter((a) => a.capabilities?.dispatch !== false);
+}
+
 function agentClass(agent) {
-  return agent === "codex" ? "codex" : "claude-code";
+  if (agent === "codex") return "codex";
+  if (agent === "claude-code") return "claude-code";
+  return "local";
 }
 
 let noticeTimer = null;
@@ -292,13 +312,13 @@ function renderTelemetry(data) {
   };
 
   const fmt = (n) => (n || 0).toLocaleString();
-  const displayAgent = (agent) => agent === "codex" ? "Codex" : "Claude Code";
   stats.appendChild(stat(fmt(data.pooled_source_tokens), "Shared corpus text"));
   stats.appendChild(stat(fmt(data.pooled_context_tokens), "Active shared context", "saved"));
   stats.appendChild(stat(`${data.context_compression_percent || 0}%`, "Corpus compression"));
   stats.appendChild(stat(fmt(data.context_delivered_tokens), "Context delivered"));
-  stats.appendChild(stat(fmt(data.claude_tokens), "Claude Code usage", "claude"));
-  stats.appendChild(stat(fmt(data.codex_tokens), "Codex usage", "codex"));
+  for (const [agentId, tokens] of Object.entries(data.agent_tokens || {})) {
+    stats.appendChild(stat(fmt(tokens), `${displayAgent(agentId)} usage`, agentClass(agentId)));
+  }
   body.appendChild(stats);
 
   const parity = el("div", "telemetry-parity");
@@ -306,9 +326,9 @@ function renderTelemetry(data) {
   parity.appendChild(el(
     "div",
     "telemetry-parity-title",
-    `${visible || "Both agents"} share one working set · ${fmt(data.exclusive_context_entries)} exclusive entries`,
+    `${visible || "All agents"} share one working set · ${fmt(data.exclusive_context_entries)} exclusive entries`,
   ));
-  for (const agent of ["claude-code", "codex"]) {
+  for (const agent of Object.keys(data.delivery_by_agent || {})) {
     const delivery = (data.delivery_by_agent || {})[agent] || {};
     const current = delivery.has_current_context ? "current" : "awaiting current context";
     parity.appendChild(el(
@@ -487,10 +507,7 @@ function renderTelemetryExplainer(data, restart = false) {
 
   const lanes = el("section", "economy-lanes");
   lanes.appendChild(el("h3", "", "Where deliveries went"));
-  const deliveryRows = [
-    ["claude-code", "Claude Code"],
-    ["codex", "Codex"],
-  ];
+  const deliveryRows = Object.keys(data.delivery_by_agent || {}).map((id) => [id, displayAgent(id)]);
   const maxSaved = Math.max(1, ...deliveryRows.map(([id]) => ((data.delivery_by_agent || {})[id] || {}).tokens_saved || 0));
   deliveryRows.forEach(([id, label], index) => {
     const delivery = (data.delivery_by_agent || {})[id] || {};
@@ -681,9 +698,11 @@ const CONTEXT_EVENT_META = {
 };
 
 function displayAgent(agent) {
+  if (agent === "developer" || agent === "user") return "Developer";
+  const known = AGENTS_CACHE.find((a) => a.id === agent);
+  if (known) return known.display_name;
   if (agent === "claude-code") return "Claude Code";
   if (agent === "codex") return "Codex";
-  if (agent === "developer" || agent === "user") return "Developer";
   return String(agent || "Unknown source");
 }
 
@@ -1826,13 +1845,11 @@ function createCoordinationTaskRow(index, defaults = {}) {
 
   const controls = el("div", "coordination-task-controls");
   const agent = document.createElement("select");
-  for (const [value, text] of [["claude-code", "Claude Code"], ["codex", "Codex"]]) {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = text;
-    agent.appendChild(option);
-  }
-  agent.value = defaults.agent || (index % 2 ? "codex" : "claude-code");
+  agent.className = "coordination-agent";
+  const rotation = dispatchableAgents();
+  const defaultAgent = defaults.agent || (rotation[index % rotation.length] || rotation[0])?.id || "claude-code";
+  agent.dataset.defaultAgent = defaultAgent;
+  populateAgentSelect(agent, defaultAgent);
   controls.appendChild(agent);
 
   const model = document.createElement("input");
@@ -2065,48 +2082,206 @@ async function saveAgentModel(agent, input) {
   }
 }
 
+function populateAgentSelect(select, defaultId) {
+  const current = select.value;
+  select.innerHTML = "";
+  for (const agent of dispatchableAgents()) {
+    const option = document.createElement("option");
+    option.value = agent.id;
+    option.textContent = agent.display_name;
+    select.appendChild(option);
+  }
+  const fallback = dispatchableAgents()[0]?.id || "claude-code";
+  select.value = [current, defaultId, fallback].find(
+    (v) => v && select.querySelector(`option[value="${CSS.escape(v)}"]`)
+  ) || fallback;
+}
+
+function populateAllAgentSelects() {
+  const dispatchSelect = document.getElementById("dispatch-agent");
+  if (dispatchSelect) populateAgentSelect(dispatchSelect, "claude-code");
+  document.querySelectorAll("select.coordination-agent").forEach((select) => {
+    populateAgentSelect(select, select.dataset.defaultAgent);
+  });
+}
+
 async function loadAgentStatus() {
+  await loadAgentsCache();
+  populateAllAgentSelects();
+
   let data;
   try {
     data = await (await apiFetch("/api/agents/status")).json();
   } catch {
-    return;
+    data = {};
   }
   let models = {};
   try {
     models = await (await apiFetch("/api/agents/models")).json();
   } catch {}
   const box = document.getElementById("agent-conn");
-  if (!box) return;
-  box.innerHTML = "";
-  for (const agent of ["claude-code", "codex"]) {
-    const s = data[agent] || {};
-    const dot = s.found ? "🟢" : "🔴";
-    const label = agent === "codex" ? "Codex" : "Claude Code";
-    const chip = el("span", "conn-chip", `${dot} ${label} ${s.found ? "connected" : "not found"}`);
-    if (!s.found && s.detail) chip.title = s.detail;
-    box.appendChild(chip);
+  if (box) {
+    box.innerHTML = "";
+    for (const agent of dispatchableAgents()) {
+      const s = data[agent.id] || {};
+      const dot = s.found ? "🟢" : "🔴";
+      const label = agent.display_name;
+      const chip = el("span", "conn-chip", `${dot} ${label} ${s.found ? "connected" : "not found"}`);
+      if (!s.found && s.detail) chip.title = s.detail;
+      box.appendChild(chip);
 
-    const modelInput = document.createElement("input");
-    modelInput.type = "text";
-    modelInput.className = "conn-model-input";
-    modelInput.placeholder = "CLI default model";
-    modelInput.value = models[agent] || "";
-    modelInput.title = models[agent] ? `Dispatches use ${models[agent]}` : "Uses the CLI's own default model";
-    modelInput.setAttribute("aria-label", `Model override for ${label}`);
-    modelInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") modelInput.blur();
-    });
-    modelInput.addEventListener("blur", () => saveAgentModel(agent, modelInput));
-    box.appendChild(modelInput);
+      const modelInput = document.createElement("input");
+      modelInput.type = "text";
+      modelInput.className = "conn-model-input";
+      modelInput.placeholder = agent.capabilities?.history === false ? "Model" : "CLI default model";
+      modelInput.value = models[agent.id] || "";
+      modelInput.title = models[agent.id] ? `Dispatches use ${models[agent.id]}` : "Uses the provider's own default model";
+      modelInput.setAttribute("aria-label", `Model override for ${label}`);
+      modelInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") modelInput.blur();
+      });
+      modelInput.addEventListener("blur", () => saveAgentModel(agent.id, modelInput));
+      box.appendChild(modelInput);
+    }
+    const hint = el("span", "conn-hint", "");
+    hint.innerHTML =
+      'If a dispatch to Claude Code says "not logged in", run <code>claude</code> once in a terminal and sign in. ' +
+      "Leave a model field blank to use that CLI's/provider's own default.";
+    box.appendChild(hint);
   }
-  const hint = el("span", "conn-hint", "");
-  hint.innerHTML =
-    'If a dispatch to Claude Code says "not logged in", run <code>claude</code> once in a terminal and sign in. ' +
-    "Leave a model field blank to use that CLI's own default.";
-  box.appendChild(hint);
+  updateDispatchConnSummary(data);
+  await loadLocalProviders();
 }
 
+async function loadLocalProviders() {
+  const box = document.getElementById("local-providers");
+  if (!box) return;
+  let providers = [];
+  try {
+    providers = await (await apiFetch("/api/agents/providers")).json();
+  } catch {
+    return;
+  }
+  box.innerHTML = "";
+  box.appendChild(el("h3", "local-providers-title", "Local / self-hosted models"));
+  const list = el("div", "local-providers-list");
+  if (!providers.length) {
+    list.appendChild(el("div", "local-providers-empty", "No local providers registered yet."));
+  }
+  for (const provider of providers) {
+    const row = el("div", "local-provider-row");
+    row.appendChild(el("span", "local-provider-name", provider.display_name));
+    row.appendChild(el("span", "local-provider-detail", `${provider.base_url} · ${provider.model}`));
+    const testBtn = el("button", "btn-secondary btn-tiny", "Test");
+    testBtn.type = "button";
+    testBtn.addEventListener("click", async () => {
+      testBtn.textContent = "Testing…";
+      testBtn.disabled = true;
+      try {
+        const res = await apiFetch(`/api/agents/providers/${encodeURIComponent(provider.agent_id)}/health`, {
+          method: "POST",
+        });
+        const result = await res.json();
+        showToast(
+          result.reachable ? `${provider.display_name} is reachable.` : `${provider.display_name}: ${result.detail || "unreachable"}`,
+          !result.reachable
+        );
+      } catch (err) {
+        showToast("Health check failed: " + err.message, true);
+      } finally {
+        testBtn.textContent = "Test";
+        testBtn.disabled = false;
+      }
+    });
+    row.appendChild(testBtn);
+    const deleteBtn = el("button", "btn-danger btn-tiny", "Remove");
+    deleteBtn.type = "button";
+    deleteBtn.addEventListener("click", async () => {
+      if (!confirm(`Remove ${provider.display_name}?`)) return;
+      try {
+        await apiFetch(`/api/agents/providers/${encodeURIComponent(provider.agent_id)}`, { method: "DELETE" });
+        await loadAgentStatus();
+      } catch (err) {
+        showToast("Failed to remove provider: " + err.message, true);
+      }
+    });
+    row.appendChild(deleteBtn);
+    list.appendChild(row);
+  }
+  box.appendChild(list);
+
+  const form = el("form", "local-provider-form");
+  const fields = [
+    ["agent_id", "id (e.g. ollama-gemma3)"],
+    ["display_name", "Display name"],
+    ["base_url", "Base URL (e.g. http://localhost:11434)"],
+    ["model", "Model (e.g. gemma3:4b)"],
+    ["api_key_env", "API key env var (optional)"],
+  ];
+  const inputs = {};
+  for (const [name, placeholder] of fields) {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.name = name;
+    input.placeholder = placeholder;
+    input.className = "local-provider-input";
+    inputs[name] = input;
+    form.appendChild(input);
+  }
+  const submit = el("button", "btn", "Add local model");
+  submit.type = "submit";
+  form.appendChild(submit);
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    submit.disabled = true;
+    try {
+      const res = await apiFetch("/api/agents/providers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agent_id: inputs.agent_id.value.trim(),
+          display_name: inputs.display_name.value.trim(),
+          base_url: inputs.base_url.value.trim(),
+          model: inputs.model.value.trim(),
+          api_key_env: inputs.api_key_env.value.trim(),
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.detail || "Failed to save provider.");
+      showToast(`${result.display_name} added.`, false);
+      await loadAgentStatus();
+    } catch (err) {
+      showToast("Not saved: " + err.message, true);
+    } finally {
+      submit.disabled = false;
+    }
+  });
+  box.appendChild(form);
+}
+
+function updateDispatchConnSummary(status) {
+  const el2 = document.getElementById("dispatch-conn-summary");
+  if (!el2) return;
+  const parts = dispatchableAgents().map((agent) => {
+    const found = (status[agent.id] || {}).found;
+    return `${found ? "🟢" : "🔴"} ${agent.display_name}`;
+  });
+  el2.textContent = parts.join("   ");
+}
+
+// ---------- Settings (agent connections & models) ----------
+
+function openSettings() {
+  const modal = document.getElementById("settings-modal");
+  if (!modal) return;
+  modal.hidden = false;
+  loadAgentStatus(); // refresh chips, models, and local providers on open
+}
+
+function closeSettings() {
+  const modal = document.getElementById("settings-modal");
+  if (modal) modal.hidden = true;
+}
 
 async function pollActiveAgents() {
   let jobs = [];
@@ -2260,6 +2435,13 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
 });
 document.getElementById("dispatch-send").addEventListener("click", sendDispatch);
 document.getElementById("backfill-btn").addEventListener("click", backfillHistory);
+document.getElementById("open-settings").addEventListener("click", openSettings);
+document.getElementById("open-settings-inline").addEventListener("click", openSettings);
+document.getElementById("close-settings").addEventListener("click", closeSettings);
+document.querySelector("[data-close-settings]").addEventListener("click", closeSettings);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeSettings();
+});
 document.getElementById("telemetry-explain-toggle").addEventListener("click", () => {
   toggleTelemetryExplainer();
 });

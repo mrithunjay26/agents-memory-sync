@@ -31,6 +31,8 @@
   --claude-soft:   rgba(231, 184, 102, 0.15);
   --codex:         #5ad3e6;
   --codex-soft:    rgba(90, 211, 230, 0.15);
+  --local:         #a78bfa;
+  --local-soft:    rgba(167, 139, 250, 0.15);
 
 
   --danger:        #ff6b7d;
@@ -338,6 +340,7 @@ body {
 .active-agent-chip .who { font-size: 11px; font-weight: 600; font-family: var(--mono); }
 .active-agent-chip .who.codex { color: var(--codex); }
 .active-agent-chip .who.claude-code { color: var(--claude); }
+.active-agent-chip .who.local { color: var(--local); }
 .active-agent-chip .latest { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
 .agent-progress { display: grid; gap: 5px; margin-top: 9px; }
 .agent-progress.compact { margin-top: 5px; }
@@ -449,7 +452,9 @@ body {
 .telemetry-stat:hover { border-color: var(--border-2); transform: translateY(-1px); }
 .telemetry-stat .value { font-family: var(--mono); font-size: 22px; font-weight: 600; letter-spacing: -0.5px; line-height: 1.1; }
 .telemetry-stat .value.claude { color: var(--claude); }
+.telemetry-stat .value.claude-code { color: var(--claude); }
 .telemetry-stat .value.codex { color: var(--codex); }
+.telemetry-stat .value.local { color: var(--local); }
 .telemetry-stat .value.saved { color: var(--accent); }
 .telemetry-stat .label { font-size: 10.5px; color: var(--muted); margin-top: 5px; letter-spacing: 0.02em; }
 .telemetry-stat:has(.value.saved) {
@@ -547,6 +552,7 @@ body {
 .economy-lane-bar { display: block; width: var(--lane-width); height: 100%; border-radius: inherit; background: var(--accent); }
 .economy-lane-bar.claude-code { background: var(--claude); }
 .economy-lane-bar.codex { background: var(--codex); }
+.economy-lane-bar.local { background: var(--local); }
 .economy-glossary { margin-top: 18px; }
 .economy-section-heading { margin-bottom: 11px; }
 .economy-section-heading h3 { font-size: 14px; }
@@ -621,6 +627,7 @@ body {
 }
 .agent-tag.claude-code { background: var(--claude-soft); color: var(--claude); border-color: rgba(231,184,102,0.28); }
 .agent-tag.codex { background: var(--codex-soft); color: var(--codex); border-color: rgba(90,211,230,0.28); }
+.agent-tag.local { background: var(--local-soft); color: var(--local); border-color: rgba(167,139,250,0.28); }
 .event-body { flex: 1; min-width: 0; }
 .event-summary { color: var(--text-2); line-height: 1.5; }
 .event-meta { color: var(--muted-2); font-size: 10.5px; margin-top: 3px; font-family: var(--mono); letter-spacing: -0.2px; }
@@ -638,6 +645,7 @@ body {
 }
 .agent-bar .bar.claude-code { background: linear-gradient(180deg, var(--claude), rgba(231,184,102,0.55)); }
 .agent-bar .bar.codex { background: linear-gradient(180deg, var(--codex), rgba(90,211,230,0.55)); }
+.agent-bar .bar.local { background: linear-gradient(180deg, var(--local), rgba(167,139,250,0.55)); }
 .agent-bar .label { font-size: 10px; color: var(--muted); font-family: var(--mono); }
 
 
@@ -773,6 +781,84 @@ select:focus { border-color: var(--border-hi); box-shadow: 0 0 0 3px var(--accen
 .conn-model-input:focus { border-color: var(--border-hi); box-shadow: 0 0 0 3px var(--accent-soft); }
 .conn-hint { font-size: 10.5px; color: var(--muted-2); line-height: 1.5; flex-basis: 100%; }
 .conn-hint code { background: var(--inset); padding: 1px 6px; border-radius: 4px; color: var(--accent); font-family: var(--mono); border: 1px solid var(--border); }
+
+.local-providers { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--border); }
+.local-providers-title { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+.local-providers-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.local-providers-empty { font-size: 11.5px; color: var(--muted-2); }
+.local-provider-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.local-provider-name { font-weight: 600; }
+.local-provider-detail { color: var(--muted); font-family: var(--mono); font-size: 11px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.local-provider-form { display: flex; flex-wrap: wrap; gap: 8px; }
+.local-provider-input {
+  font-family: var(--mono);
+  background: var(--inset);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--r-sm);
+  padding: 5px 9px;
+  font-size: 11.5px;
+  flex: 1 1 160px;
+  outline: none;
+}
+.local-provider-input:focus { border-color: var(--border-hi); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* compact connection summary + manage link in the deploy panel */
+.dispatch-conn-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.dispatch-conn-summary { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+/* settings modal (agent connections & models) */
+.settings-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.settings-modal[hidden] { display: none; }
+.settings-backdrop { position: absolute; inset: 0; background: rgba(2, 6, 5, 0.66); backdrop-filter: blur(3px); }
+.settings-dialog {
+  position: relative;
+  width: min(680px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+}
+.settings-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 1;
+}
+.settings-head h2 { margin: 0; font-size: 16px; }
+.settings-sub { margin: 4px 0 0; font-size: 12px; color: var(--muted); max-width: 46ch; }
+.settings-body { padding: 8px 20px 20px; }
+.settings-section { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.settings-section:last-child { border-bottom: none; }
+.settings-section h3 { margin: 0 0 4px; font-size: 13px; }
+.settings-help { margin: 0 0 6px; font-size: 12px; color: var(--muted); }
+/* inside the modal these containers no longer need their in-panel divider */
+.settings-section .agent-conn,
+.settings-section .local-providers { margin-top: 4px; padding-top: 0; border-top: none; }
 
 
 .dispatch-history-list { max-height: 640px; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }

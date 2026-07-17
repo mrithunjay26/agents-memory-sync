@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/static/style.css" />
+<link rel="stylesheet" href="/static/style.css?v=3" />
 </head>
 <body>
 <div id="toasts" class="toasts"></div>
@@ -73,6 +73,9 @@
         <span class="status-live"><span class="live-dot"></span> streaming</span>
         <button id="backfill-btn" class="btn btn-secondary" style="display:none;" type="button">Import history</button>
         <span id="backfill-status" class="status"></span>
+        <button id="open-settings" class="icon-btn" title="Agent connections &amp; models" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </button>
       </div>
     </header>
 
@@ -304,10 +307,7 @@
           <textarea id="dispatch-prompt" class="dispatch-textarea" placeholder="What should the agent do? It already has the shared context for this repo."></textarea>
           <div id="attached-files" class="attached-files"></div>
           <div class="dispatch-controls">
-            <select id="dispatch-agent">
-              <option value="claude-code">Claude Code</option>
-              <option value="codex">Codex</option>
-            </select>
+            <select id="dispatch-agent"></select>
             <label class="dispatch-checkbox">
               <input type="checkbox" id="dispatch-allow-edits" checked />
               Allow edits
@@ -318,7 +318,10 @@
             </label>
             <button id="dispatch-send" class="btn" type="button">Deploy ▸</button>
           </div>
-          <div id="agent-conn" class="agent-conn"></div>
+          <div class="dispatch-conn-row">
+            <span id="dispatch-conn-summary" class="dispatch-conn-summary"></span>
+            <button id="open-settings-inline" class="link-btn" type="button">Manage agents &amp; models</button>
+          </div>
           <div class="dispatch-warning">
             With edits allowed, the agent can modify files in this repo without asking again.
           </div>
@@ -339,8 +342,33 @@
   </div>
 </div>
 
+<!-- Settings: agent connections & models (global, always reachable) -->
+<div id="settings-modal" class="settings-modal" hidden>
+  <div class="settings-backdrop" data-close-settings></div>
+  <div class="settings-dialog" role="dialog" aria-modal="true" aria-label="Agent connections and models">
+    <div class="settings-head">
+      <div>
+        <h2>Agent connections &amp; models</h2>
+        <p class="settings-sub">Connect Claude Code, Codex, and any local/self-hosted models. These apply across every repository.</p>
+      </div>
+      <button id="close-settings" class="icon-btn" title="Close" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="settings-body">
+      <section class="settings-section">
+        <h3>CLI agents</h3>
+        <p class="settings-help">Claude Code and Codex run as local CLIs. A green dot means the binary was found on this machine. Set a model to pin every dispatch to it, or leave it blank to use the CLI's own default.</p>
+        <div id="agent-conn" class="agent-conn"></div>
+      </section>
+      <section class="settings-section">
+        <div id="local-providers" class="local-providers"></div>
+      </section>
+    </div>
+  </div>
+</div>
 
-<script src="/static/app.js"></script>
-<script src="/static/cockpit.js"></script>
+<script src="/static/app.js?v=3"></script>
+<script src="/static/cockpit.js?v=3"></script>
 </body>
 </html>

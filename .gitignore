@@ -8,3 +8,5 @@ secret_key
 .agentmemorysync/
 run_diag.py
 .idea/
+outputs/
+.test-*/

@@ -156,3 +156,38 @@ def test_user_creation_and_lookup():
     assert user["username"] == "alice"
     assert user["password_hash"] == "hashed-password"
     assert store.get_user_by_username("nobody") is None
+
+
+def test_local_provider_upsert_list_get_delete():
+    assert store.list_local_providers() == []
+
+    created = store.upsert_local_provider(
+        "ollama-gemma3", "Ollama Gemma3", "http://localhost:11434", "gemma3:4b", None
+    )
+    assert created["agent_id"] == "ollama-gemma3"
+    assert created["base_url"] == "http://localhost:11434"
+    assert store.get_local_provider("ollama-gemma3") == created
+    assert store.list_local_providers() == [created]
+
+    updated = store.upsert_local_provider(
+        "ollama-gemma3", "Ollama Gemma3 (4B)", "http://localhost:11434", "gemma3:4b", "LOCAL_KEY"
+    )
+    assert updated["display_name"] == "Ollama Gemma3 (4B)"
+    assert updated["api_key_env"] == "LOCAL_KEY"
+    assert updated["created_at"] == created["created_at"]
+
+    assert store.delete_local_provider("ollama-gemma3") is True
+    assert store.get_local_provider("ollama-gemma3") is None
+    assert store.delete_local_provider("ollama-gemma3") is False
+
+
+def test_sum_dispatch_tokens_filters_by_agent_and_project():
+    store.create_dispatch_job("job-1", "/repo", "ollama-gemma3", "prompt", False)
+    store.update_dispatch_job("job-1", "done", "result", tokens=42)
+    store.create_dispatch_job("job-2", "/repo", "ollama-gemma3", "prompt", False)
+    store.update_dispatch_job("job-2", "done", "result", tokens=8)
+    store.create_dispatch_job("job-3", "/other", "ollama-gemma3", "prompt", False)
+    store.update_dispatch_job("job-3", "done", "result", tokens=1000)
+
+    assert store.sum_dispatch_tokens("/repo", "ollama-gemma3") == 50
+    assert store.sum_dispatch_tokens("/repo", "codex") == 0

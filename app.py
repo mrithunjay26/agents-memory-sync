@@ -2,6 +2,7 @@ import csv
 import io
 import json
 import os
+import re
 
 from fastapi import (
     BackgroundTasks,
@@ -42,6 +43,7 @@ from handoff import generate_handoff
 from store import (
     create_context_note,
     create_user,
+    delete_local_provider,
     delete_project_permission,
     delete_context_note,
     delete_dispatch_job,
@@ -50,6 +52,7 @@ from store import (
     get_conflicts,
     get_context_bundle,
     get_enterprise_policy,
+    get_local_provider,
     get_project_access,
     get_dispatch_job,
     get_dispatch_interaction,
@@ -61,6 +64,7 @@ from store import (
     list_dispatch_interactions,
     list_dispatch_logs,
     list_events,
+    list_local_providers,
     list_project_permissions,
     list_projects,
     list_users,
@@ -75,6 +79,7 @@ from store import (
     set_agent_model,
     update_context_event,
     update_context_settings,
+    upsert_local_provider,
     verify_audit_chain,
 )
 from telemetry import get_telemetry_summary
@@ -83,6 +88,17 @@ app = FastAPI(title="AgentMemorySync")
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.middleware("http")
+async def _revalidate_static(request: Request, call_next):
+    # Ask browsers to revalidate assets (they still get fast 304s via ETag),
+    # so pulling an update and refreshing always loads the new JS/CSS instead
+    # of a stale cached copy.
+    response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 class SignupBody(BaseModel):
@@ -155,6 +171,14 @@ class InteractionResponseBody(BaseModel):
 class AgentModelBody(BaseModel):
     agent: str
     model: str = ""
+
+
+class LocalProviderBody(BaseModel):
+    agent_id: str
+    display_name: str
+    base_url: str
+    model: str
+    api_key_env: str = ""
 
 
 class AdminUserCreateBody(BaseModel):
@@ -860,6 +884,60 @@ def api_update_agent_model(payload: AgentModelBody, admin: str = Depends(require
     _audit(admin, "agent.model_updated", target_type="agent", target_id=payload.agent,
            details={"model": payload.model})
     return result
+
+
+_BUILTIN_AGENT_IDS = ("claude-code", "codex")
+_LOCAL_PROVIDER_ID_RE = re.compile(r"^[a-z][a-z0-9_-]{1,39}$")
+
+
+@app.get("/api/agents/providers")
+def api_local_providers(_user: str = Depends(require_auth)):
+    return list_local_providers()
+
+
+@app.post("/api/agents/providers")
+def api_create_local_provider(payload: LocalProviderBody, admin: str = Depends(require_admin)):
+    agent_id = payload.agent_id.strip().lower()
+    if agent_id in _BUILTIN_AGENT_IDS:
+        raise HTTPException(status_code=400, detail=f"{agent_id!r} is a built-in agent id.")
+    if not _LOCAL_PROVIDER_ID_RE.match(agent_id):
+        raise HTTPException(
+            status_code=400,
+            detail="agent_id must start with a letter and contain only lowercase letters, digits, - or _.",
+        )
+    base_url = payload.base_url.strip().rstrip("/")
+    if not base_url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="base_url must start with http:// or https://")
+    display_name = payload.display_name.strip() or agent_id
+    model = payload.model.strip()
+    if not model:
+        raise HTTPException(status_code=400, detail="model is required.")
+    result = upsert_local_provider(
+        agent_id, display_name, base_url, model, payload.api_key_env.strip() or None
+    )
+    _audit(admin, "agent.provider_saved", target_type="agent", target_id=agent_id,
+           details={"base_url": base_url, "model": model})
+    return result
+
+
+@app.delete("/api/agents/providers/{agent_id}")
+def api_delete_local_provider(agent_id: str, admin: str = Depends(require_admin)):
+    if not delete_local_provider(agent_id):
+        raise HTTPException(status_code=404, detail="No such local provider.")
+    _audit(admin, "agent.provider_deleted", target_type="agent", target_id=agent_id)
+    return {"deleted": agent_id}
+
+
+@app.post("/api/agents/providers/{agent_id}/health")
+def api_local_provider_health(agent_id: str, _user: str = Depends(require_auth)):
+    if not get_local_provider(agent_id):
+        raise HTTPException(status_code=404, detail="No such local provider.")
+    try:
+        adapter = get_agent_adapter(agent_id)
+        adapter.resolve_binary()
+        return {"agent_id": agent_id, "reachable": True}
+    except Exception as exc:
+        return {"agent_id": agent_id, "reachable": False, "detail": str(exc)}
 
 
 @app.post("/api/dispatch/{job_id}/handoff")
