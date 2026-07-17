@@ -359,9 +359,84 @@
       <section class="settings-section">
         <h3>CLI agents</h3>
         <p class="settings-help">Claude Code and Codex run as local CLIs. A green dot means the binary was found on this machine. Set a model to pin every dispatch to it, or leave it blank to use the CLI's own default.</p>
+        <details class="setup-guide">
+          <summary>Setup guide: Claude Code &amp; Codex</summary>
+          <div class="setup-guide-body">
+            <div class="setup-block">
+              <h4>Claude Code</h4>
+              <ol>
+                <li>Install the CLI and sign in once: run <code>claude</code> in a terminal and complete the login flow. This dashboard shells out to that same install (<code>claude -p ...</code>), so it needs to already be authenticated before you dispatch from here.</li>
+                <li>On Windows the install location is auto-detected. If the status dot below stays red, set <code>AGENT_MEMORY_SYNC_CLAUDE_BIN</code> to the full path of <code>claude.exe</code> before starting the dashboard.</li>
+                <li>To have Claude Code sessions recorded into the shared timeline (not just dispatched from here), merge <code>config/generated/claude_settings.json</code> into <code>%USERPROFILE%\.claude\settings.json</code>, then restart Claude Code.</li>
+                <li>Leave the model field below blank to use Claude Code's own default, or type an exact id (e.g. <code>claude-sonnet-5</code>) to pin every future dispatch to it.</li>
+              </ol>
+            </div>
+            <div class="setup-block">
+              <h4>Codex</h4>
+              <ol>
+                <li>Install the CLI and run <code>codex login</code> once. Dispatch shells out to <code>codex exec</code> headlessly, so it needs that same authenticated session.</li>
+                <li>If the status dot below stays red on Windows, set <code>AGENT_MEMORY_SYNC_CODEX_BIN</code> to the full path of <code>codex.exe</code>.</li>
+                <li>Codex ships in two flavors, check which one you have before wiring up history capture: open <code>%USERPROFILE%\.codex\config.toml</code>. Already has one or more <code>[mcp_servers.*]</code> entries? You're on the MCP-capable build, merge <code>config/generated/codex_mcp.toml</code>. See a <code>/hooks</code> command or a <code>hooks.json</code> instead? Merge <code>config/generated/codex_hooks.toml</code>. Restart Codex after merging either one.</li>
+                <li>The model field below works the same as Claude Code's: blank uses Codex's own default, or pin an id like <code>gpt-5-codex</code>.</li>
+              </ol>
+            </div>
+          </div>
+        </details>
         <div id="agent-conn" class="agent-conn"></div>
       </section>
       <section class="settings-section">
+        <h3>Local &amp; self-hosted models</h3>
+        <p class="settings-help">Any endpoint that speaks the OpenAI chat-completions API can plug in as a third dispatch lane, read-only for now.</p>
+        <details class="setup-guide">
+          <summary>Setup guide: local &amp; self-hosted models</summary>
+          <div class="setup-guide-body">
+            <p class="setup-note">
+              This lane talks OpenAI-compatible HTTP: dispatch calls <code>POST {base_url}/v1/chat/completions</code>
+              and the <strong>Test</strong> button calls <code>GET {base_url}/v1/models</code>. There's no tool
+              loop yet, so a local model can read the pooled context and answer, but it can't edit files, unlike
+              Claude Code and Codex. Always deploy it with "allow edits" off.
+            </p>
+            <div class="setup-block">
+              <h4>Ollama</h4>
+              <ol>
+                <li>Install Ollama, then pull a model: <code>ollama pull gemma3:4b</code>.</li>
+                <li>Run <code>ollama serve</code> (or just launch the app) — it exposes an OpenAI-compatible API on port 11434 by default.</li>
+                <li>Add it below with base URL <code>http://localhost:11434</code> and model <code>gemma3:4b</code> (or whichever tag you pulled). No API key needed.</li>
+              </ol>
+            </div>
+            <div class="setup-block">
+              <h4>LM Studio</h4>
+              <ol>
+                <li>Load a model in LM Studio, then open the Developer tab and start the local server.</li>
+                <li>Default base URL is <code>http://localhost:1234</code>. Use the model id shown as loaded (e.g. <code>lmstudio-community/gemma-2-9b</code>).</li>
+              </ol>
+            </div>
+            <div class="setup-block">
+              <h4>vLLM</h4>
+              <ol>
+                <li><code>vllm serve &lt;hf-model-id&gt; --port 8000</code> starts an OpenAI-compatible server.</li>
+                <li>Base URL is <code>http://localhost:8000</code>; model is the same id you passed to <code>vllm serve</code>.</li>
+              </ol>
+            </div>
+            <div class="setup-block">
+              <h4>LocalAI &amp; text-generation-webui</h4>
+              <ol>
+                <li>LocalAI: run its Docker image; it defaults to port 8080 with an OpenAI-compatible API built in.</li>
+                <li>text-generation-webui: launch with <code>--api</code>; its OpenAI-compatible extension defaults to port 5000.</li>
+              </ol>
+            </div>
+            <div class="setup-block">
+              <h4>Hosted OpenAI-compatible APIs (Together, Groq, OpenRouter, ...)</h4>
+              <ol>
+                <li>Set an environment variable with the provider's API key in the environment the dashboard runs in, e.g. <code>OPENROUTER_API_KEY</code>.</li>
+                <li>Use that provider's base URL and one of its model ids, then put the env var's <em>name</em> — not the key itself — in the "API key env var" field below. It's read from the dashboard process's environment at request time and never stored.</li>
+              </ol>
+            </div>
+            <p class="setup-note">
+              Field reference: <code>id</code> is an internal slug (unique, letters/numbers/dashes); <code>display name</code> is what shows in the dispatch picker; <code>base URL</code> has no trailing <code>/v1</code>. Click <strong>Test</strong> after adding to confirm the endpoint answers.
+            </p>
+          </div>
+        </details>
         <div id="local-providers" class="local-providers"></div>
       </section>
     </div>
